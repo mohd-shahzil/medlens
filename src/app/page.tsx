@@ -19,6 +19,7 @@ import {
   LayoutDashboard,
   ClipboardList,
   FileCheck,
+  Download,
   X,
 } from "lucide-react";
 
@@ -246,6 +247,7 @@ export default function Home() {
 
   const [fileName, setFileName] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState("");
   const [fileError, setFileError] = useState("");
   const [extractedText, setExtractedText] = useState("");
   const [originalExtractedText, setOriginalExtractedText] = useState("");
@@ -271,6 +273,20 @@ export default function Home() {
       );
     }
   }, []);
+
+  useEffect(() => {
+    if (!selectedFile || !selectedFile.type.startsWith("image/")) {
+      setImagePreviewUrl("");
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(selectedFile);
+    setImagePreviewUrl(objectUrl);
+
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [selectedFile]);
 
   function toggleTheme() {
     const next = theme === "light" ? "dark" : "light";
@@ -483,6 +499,74 @@ useEffect(() => {
     { label: "Doctor Questions", icon: MessageCircleQuestion, active: false },
     { label: "Settings", icon: Settings, active: false },
   ];
+
+  function downloadExplanationPdf() {
+    if (!explanation.trim()) return;
+
+    // Open a print-friendly document. The browser's Print dialog lets the user
+    // save it as a PDF without adding a PDF library or losing Hindi characters.
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      setModelStatus("The PDF window was blocked. Allow pop-ups for this site and try again.");
+      return;
+    }
+
+    const escapeHtml = (value: string) =>
+      value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+        
+    const formattedLines = explanation.replace(/\r/g, "").split("\n").map((rawLine) => {
+      const line = rawLine.trim();
+      if (!line) return "";
+      const heading = line.match(/^#{1,4}\s*(\d{1,2})[.)]?\s*[-.:)]?\s*(.+)$/) || line.match(/^(\d{1,2})[.)]\s+(.+)$/);
+      if (heading) return `<h2><span class="number">${escapeHtml(heading[1])}</span>${escapeHtml(heading[2].replace(/\*\*/g, ""))}</h2>`;
+      if (/^#{1,4}\s+/.test(line)) return `<h2>${escapeHtml(line.replace(/^#{1,4}\s+/, "").replace(/\*\*/g, ""))}</h2>`;
+      if (/^[-*•]\s+/.test(line)) return `<li>${escapeHtml(line.replace(/^[-*•]\s+/, "")).replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")}</li>`;
+      return `<p>${escapeHtml(line).replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")}</p>`;
+    }).join("\n").replace(/(?:<li>.*?<\/li>\n?)+/gs, (list) => `<ul>${list}</ul>`);
+
+    const printLabels: Record<string, { htmlLang: string; locale: string; documentTitle: string; reportTitle: string; file: string; language: string; generated: string; important: string; disclaimer: string; footer: string }> = {
+      English: { htmlLang: "en", locale: "en-IN", documentTitle: "MedLens Report Explanation", reportTitle: "Medical Report Explanation", file: "File", language: "Language", generated: "Generated", important: "Important", disclaimer: "This is an AI-generated educational explanation, not a diagnosis or treatment recommendation. AI can omit or misinterpret findings. Verify all values against the original report and discuss the report with a qualified healthcare professional.", footer: "Generated with MedLens · Keep this document private because it may contain sensitive health information." },
+      Hindi: { htmlLang: "hi", locale: "hi-IN", documentTitle: "MedLens रिपोर्ट की व्याख्या", reportTitle: "मेडिकल रिपोर्ट की व्याख्या", file: "फ़ाइल", language: "भाषा", generated: "बनाई गई तारीख", important: "महत्वपूर्ण", disclaimer: "यह AI द्वारा तैयार की गई शैक्षिक व्याख्या है, निदान या उपचार की सलाह नहीं। AI कुछ निष्कर्ष छोड़ सकता है या उनकी गलत व्याख्या कर सकता है। सभी मानों का मूल रिपोर्ट से मिलान करें और योग्य स्वास्थ्य विशेषज्ञ से चर्चा करें।", footer: "MedLens द्वारा तैयार · इस दस्तावेज़ में संवेदनशील स्वास्थ्य जानकारी हो सकती है, इसे निजी रखें।" },
+      Urdu: { htmlLang: "ur", locale: "ur-PK", documentTitle: "MedLens رپورٹ کی وضاحت", reportTitle: "طبی رپورٹ کی وضاحت", file: "فائل", language: "زبان", generated: "تیار ہونے کی تاریخ", important: "اہم", disclaimer: "یہ AI کی تیار کردہ تعلیمی وضاحت ہے، تشخیص یا علاج کی سفارش نہیں۔ AI بعض نتائج چھوڑ سکتا ہے یا ان کی غلط تشریح کر سکتا ہے۔ تمام اقدار کو اصل رپورٹ سے ملائیں اور کسی مستند طبی ماہر سے مشورہ کریں۔", footer: "MedLens کے ذریعے تیار کردہ · اس دستاویز میں حساس طبی معلومات ہو سکتی ہیں، اسے نجی رکھیں۔" },
+      Bengali: { htmlLang: "bn", locale: "bn-BD", documentTitle: "MedLens রিপোর্টের ব্যাখ্যা", reportTitle: "মেডিকেল রিপোর্টের ব্যাখ্যা", file: "ফাইল", language: "ভাষা", generated: "তৈরির তারিখ", important: "গুরুত্বপূর্ণ", disclaimer: "এটি AI-তৈরি শিক্ষামূলক ব্যাখ্যা, রোগ নির্ণয় বা চিকিৎসার পরামর্শ নয়। AI কিছু তথ্য বাদ দিতে বা ভুলভাবে ব্যাখ্যা করতে পারে। মূল রিপোর্টের সঙ্গে সব মান যাচাই করুন এবং একজন যোগ্য স্বাস্থ্যকর্মীর সঙ্গে আলোচনা করুন।", footer: "MedLens দিয়ে তৈরি · এই নথিতে সংবেদনশীল স্বাস্থ্যতথ্য থাকতে পারে, তাই ব্যক্তিগত রাখুন।" },
+      Tamil: { htmlLang: "ta", locale: "ta-IN", documentTitle: "MedLens அறிக்கை விளக்கம்", reportTitle: "மருத்துவ அறிக்கை விளக்கம்", file: "கோப்பு", language: "மொழி", generated: "உருவாக்கிய தேதி", important: "முக்கியம்", disclaimer: "இது AI உருவாக்கிய கல்வி நோக்க விளக்கம்; நோயறிதலோ சிகிச்சை பரிந்துரையோ அல்ல. AI சில கண்டுபிடிப்புகளை விடக்கூடும் அல்லது தவறாகப் புரிந்துகொள்ளக்கூடும். எல்லா மதிப்புகளையும் அசல் அறிக்கையுடன் சரிபார்த்து தகுதியான மருத்துவ நிபுணருடன் கலந்துரையாடவும்.", footer: "MedLens மூலம் உருவாக்கப்பட்டது · இந்த ஆவணத்தில் முக்கியமான சுகாதாரத் தகவல்கள் இருக்கலாம்; தனிப்பட்டதாக வைத்திருங்கள்." },
+      Telugu: { htmlLang: "te", locale: "te-IN", documentTitle: "MedLens నివేదిక వివరణ", reportTitle: "వైద్య నివేదిక వివరణ", file: "ఫైల్", language: "భాష", generated: "తయారైన తేదీ", important: "ముఖ్యం", disclaimer: "ఇది AI రూపొందించిన విద్యాపరమైన వివరణ మాత్రమే; నిర్ధారణ లేదా చికిత్స సిఫార్సు కాదు. AI కొన్ని విషయాలను వదిలివేయవచ్చు లేదా తప్పుగా అర్థం చేసుకోవచ్చు. అన్ని విలువలను అసలు నివేదికతో సరిపోల్చి, అర్హత కలిగిన వైద్య నిపుణుడితో చర్చించండి.", footer: "MedLens ద్వారా రూపొందించబడింది · ఈ పత్రంలో సున్నితమైన ఆరోగ్య సమాచారం ఉండవచ్చు; దయచేసి గోప్యంగా ఉంచండి." },
+    };
+    const labels = printLabels[language] || printLabels.English;
+    const safeFileTitle = escapeHtml(fileName || "Medical report");
+    const safeLanguage = escapeHtml(language);
+    const reportDate = new Date().toLocaleDateString(labels.locale);
+    printWindow.document.open();
+    printWindow.document.write(`<!doctype html>
+      <html lang="${labels.htmlLang}">
+      <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+      <title>${escapeHtml(labels.documentTitle)}</title>
+      <style>
+        @page { size: A4; margin: 18mm 16mm; }
+        * { box-sizing: border-box; }
+        body { margin: 0; color: #1e293b; font-family: Arial, "Noto Sans Devanagari", "Noto Sans", sans-serif; font-size: 11pt; line-height: 1.7; }
+        header { border-bottom: 3px solid #0f766e; padding-bottom: 14px; margin-bottom: 22px; }
+        .brand { color: #0f766e; font-size: 11pt; font-weight: 700; letter-spacing: 1px; }
+        h1 { margin: 7px 0 4px; color: #0f172a; font-size: 23pt; }
+        .meta { color: #64748b; font-size: 9pt; }
+        h2 { display: flex; align-items: flex-start; gap: 9px; margin: 22px 0 9px; padding-bottom: 7px; border-bottom: 1px solid #ddd6fe; color: #5b21b6; font-size: 15pt; page-break-after: avoid; }
+        .number { display: inline-flex; min-width: 25px; height: 25px; align-items: center; justify-content: center; border-radius: 50%; background: #ede9fe; color: #5b21b6; font-size: 10pt; }
+        p { margin: 8px 0; white-space: pre-wrap; }
+        ul { margin: 8px 0 12px; padding-left: 22px; } li { margin: 5px 0; padding-left: 3px; }
+        strong { color: #0f172a; }
+        .disclaimer { margin-top: 28px; padding: 13px 15px; border: 1px solid #fcd34d; border-radius: 8px; background: #fffbeb; color: #92400e; font-size: 9pt; }
+        footer { margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 9px; color: #64748b; font-size: 8pt; text-align: center; }
+      </style></head><body>
+      <header><div class="brand">MEDLENS · YOUR HEALTH, MADE SIMPLE</div><h1>${escapeHtml(labels.reportTitle)}</h1>
+      <div class="meta">${escapeHtml(labels.file)}: ${safeFileTitle} · ${escapeHtml(labels.language)}: ${safeLanguage} · ${escapeHtml(labels.generated)}: ${escapeHtml(reportDate)}</div></header>
+      <main>${formattedLines}</main>
+      <div class="disclaimer"><strong>${escapeHtml(labels.important)}:</strong> ${escapeHtml(labels.disclaimer)}</div>
+      <footer>${escapeHtml(labels.footer)}</footer>
+      <script>window.onload = function () { window.focus(); window.print(); };</script>
+      </body></html>`);
+    printWindow.document.close();
+  }
 
   async function explainReportWithGemini() {
     if (!extractedText.trim()) {
@@ -783,7 +867,6 @@ useEffect(() => {
                         setFileError("");
                         setExtractedText("");
                         setOriginalExtractedText("");
-  setOriginalExtractedText("");
                         setExtractionStatus("");
                         if (fileInput.current) fileInput.current.value = "";
                       }}
@@ -794,11 +877,11 @@ useEffect(() => {
                   </div>
                 </div>
 
-                {selectedFile.type.startsWith("image/") && (
+                {selectedFile.type.startsWith("image/") && imagePreviewUrl && (
                   <div className="mt-4 border-t border-slate-200 pt-4 dark:border-slate-800">
                     <p className="mb-3 text-sm font-medium">Image preview</p>
                     <img
-                      src={URL.createObjectURL(selectedFile)}
+                      src={imagePreviewUrl}
                       alt="Selected medical report preview"
                       className="max-h-96 max-w-full rounded-xl border border-slate-200 object-contain dark:border-slate-700"
                     />
@@ -940,10 +1023,17 @@ useEffect(() => {
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300">
                       <FileCheck size={21} />
                     </div>
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <h3 className="text-lg font-bold text-slate-900 dark:text-white sm:text-xl">Your report explained</h3>
                       <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">A section-by-section explanation in your selected language</p>
                     </div>
+                    <button
+                      type="button"
+                      onClick={downloadExplanationPdf}
+                      className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-teal-700 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-teal-800 sm:px-4 sm:text-sm"
+                    >
+                      <Download size={16} /> <span className="hidden sm:inline">Download PDF</span><span className="sm:hidden">PDF</span>
+                    </button>
                   </div>
                   <div className="space-y-5 p-5 sm:p-6">
                     <ExplanationContent content={explanation} />
