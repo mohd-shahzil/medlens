@@ -10,7 +10,6 @@ import {
   Languages,
   Sun,
   Moon,
-  ChevronRight,
   ShieldCheck,
   Sparkles,
   Clock3,
@@ -226,20 +225,6 @@ function parseMedicalResults(text: string): ParsedMedicalResult[] {
   return results.slice(0, 40);
 }
 
-const reports = [
-  {
-    name: "Sample blood test",
-    date: "Demo report",
-    type: "Blood test",
-    icon: FileCheck,
-  },
-  {
-    name: "Sample health report",
-    date: "Demo report",
-    type: "General report",
-    icon: FileText,
-  },
-];
 
 export default function Home() {
   const [theme, setTheme] = useState<"light" | "dark">("light");
@@ -495,7 +480,6 @@ useEffect(() => {
 
   const navItems = [
     { label: "Dashboard", icon: LayoutDashboard, active: true },
-    { label: "My Reports", icon: ClipboardList, active: false },
     { label: "Doctor Questions", icon: MessageCircleQuestion, active: false },
     { label: "Settings", icon: Settings, active: false },
   ];
@@ -635,8 +619,6 @@ useEffect(() => {
                 onClick={() =>
                   label === "Settings"
                     ? document.getElementById("settings")?.scrollIntoView({ behavior: "smooth" })
-                    : label === "My Reports"
-                    ? document.getElementById("reports")?.scrollIntoView({ behavior: "smooth" })
                     : label === "Dashboard"
                     ? window.scrollTo({ top: 0, behavior: "smooth" })
                     : document.getElementById("doctor-questions")?.scrollIntoView({ behavior: "smooth" })
@@ -719,7 +701,7 @@ useEffect(() => {
                   key={label}
                   onClick={() => {
                     setMenuOpen(false);
-                    const id = label === "Settings" ? "settings" : label === "My Reports" ? "reports" : label === "Doctor Questions" ? "doctor-questions" : "";
+                    const id = label === "Settings" ? "settings" : label === "Doctor Questions" ? "doctor-questions" : "";
                     if (id) document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
                     else window.scrollTo({ top: 0, behavior: "smooth" });
                   }}
@@ -985,7 +967,7 @@ useEffect(() => {
                           className="w-full rounded-xl border border-violet-300 bg-white p-4 text-sm leading-7 text-slate-800 shadow-sm outline-none transition focus:border-violet-500 focus:ring-2 focus:ring-violet-200 dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-violet-400 dark:focus:ring-violet-900"
                           aria-label="Editable extracted PDF text"
                         />
-                        {hasTextEdits && <p role="status" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">You have edited this extracted text. Your edited version will be sent to Gemini.</p>}
+                        {hasTextEdits && <p role="status" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">You have edited this extracted text. Your edited version will be sent to our Ai model.</p>}
                         <p className="text-xs text-amber-700 dark:text-amber-300">You can correct extraction mistakes here. Verify every value, decimal, unit, and reference range against the original report before generating an explanation.</p>
                       </div>
                     )}
@@ -1011,7 +993,7 @@ useEffect(() => {
                   <div className="rounded-xl bg-violet-50 p-2 text-violet-700 dark:bg-violet-950 dark:text-violet-300"><Sparkles size={20} /></div>
                   <div className="flex-1">
                     <h2 className="font-semibold">Understand your report with Gemini AI</h2>
-                    <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">Gemini explains the extracted report in your selected language. Your API key stays on the server; the extracted report text is sent to Google Gemini for processing.</p>
+                    <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">We explains the extracted report in your selected language. The extracted report text is sent to our Ai model for processing.</p>
                   </div>
                 </div>
                 <button onClick={explainReportWithGemini} disabled={isExplaining} className="inline-flex items-center gap-2 rounded-xl bg-violet-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-800 disabled:cursor-not-allowed disabled:opacity-60">
@@ -1123,36 +1105,6 @@ useEffect(() => {
                   <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">{text}</p>
                 </article>
               ))}
-            </section>
-
-            {/* Recent reports */}
-            <section id="reports" className="scroll-mt-24">
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-xl font-bold">Recent reports</h2>
-                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                    Your report workspace
-                  </p>
-                </div>
-                <span className="text-xs text-slate-500 dark:text-slate-400">Demo data only</span>
-              </div>
-              <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-                {reports.map(({ name, date, type, icon: Icon }, index) => (
-                  <div key={name} className={`flex items-center gap-3 p-4 sm:p-5 ${index ? "border-t border-slate-100 dark:border-slate-800" : ""}`}>
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-800 dark:bg-teal-950 dark:text-teal-300">
-                      <Icon size={21} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold">{name}</p>
-                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{type} · {date}</p>
-                    </div>
-                    <span className="hidden rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-600 dark:bg-slate-800 dark:text-slate-300 sm:inline">
-                      Sample
-                    </span>
-                    <ChevronRight className="text-slate-400" size={19} />
-                  </div>
-                ))}
-              </div>
             </section>
 
             {/* Consultation preparation */}
